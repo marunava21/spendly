@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:intl/intl.dart';
-
 import 'package:spendly/providers/expense_provider.dart';
-import 'package:spendly/screens/add_expense_screen.dart';
 import 'package:spendly/widgets/expense_list_item.dart';
+import 'package:spendly/screens/expense_search_delegate.dart';
+import 'package:spendly/screens/add_expense_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -14,62 +13,168 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  ScrollController? _dateScrollController;
+
   @override
   void initState() {
     super.initState();
-
     Future.microtask(() {
       if (mounted) {
-        context.read<ExpenseProvider>().loadTodayExpense();
+        context.read<ExpenseProvider>().loadExpenses();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_dateScrollController == null) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      _dateScrollController = ScrollController(
+        initialScrollOffset: 30 * 68.0 - screenWidth / 2 + 34,
+      );
+    }
+    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Spendly'),
-        centerTitle:true,
-        elevation: 0,
-      ),
-      body: Consumer<ExpenseProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return Column(
-            children: [
-              _buildTotalCard(context, provider.todayTotal),
-              const SizedBox(height: 8),
-              _buildDateheader(),
-              const SizedBox(height: 8),
-              Expanded(child: provider.expenses.isEmpty ? _buildEmptyState() : _buildExpenseList(provider),
-                ),
-            ],
-          );
-        },
-        ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final provider = context.read<ExpenseProvider>();
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AddExpenseScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
           );
-
-          provider.loadTodayExpense();
+          provider.loadExpenses();
+          provider.loadCalendarData(); // Refresh calendar data as well
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Expense'),
+        child: const Icon(Icons.add),
+      ),
+      appBar: AppBar(
+        title: const Text('Spendly'),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: ExpenseSearchDelegate(context.read<ExpenseProvider>()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Consumer<ExpenseProvider>(
+        builder: (context, provider, child) {
+          return Column(
+            children: [
+              _buildFilterDropdown(provider),
+              if (provider.currentFilter == DateRangeFilter.daily)
+                _buildDateCarousel(provider),
+              _buildSummaryCard(provider),
+              Expanded(
+                child: provider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : provider.expenses.isEmpty
+                        ? _buildEmptyState()
+                        : _buildExpenseList(provider),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTotalCard(BuildContext context, double total) {
+  Widget _buildFilterDropdown(ExpenseProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Transactions',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          DropdownButton<DateRangeFilter>(
+            value: provider.currentFilter,
+            onChanged: (DateRangeFilter? newValue) {
+              if (newValue != null) {
+                provider.setFilter(newValue);
+              }
+            },
+            items: DateRangeFilter.values.map((filter) {
+              return DropdownMenuItem(
+                value: filter,
+                child: Text(
+                  filter.toString().split('.').last.replaceAll('this', 'This '),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateCarousel(ExpenseProvider provider) {
+    final now = DateTime.now();
+    return SizedBox(
+      height: 70,
+      child: ListView.builder(
+        controller: _dateScrollController,
+        scrollDirection: Axis.horizontal,
+        itemCount: 61,
+        itemBuilder: (context, index) {
+          final date = now.subtract(Duration(days: 30 - index));
+          final isSelected = date.year == provider.selectedDate.year &&
+                             date.month == provider.selectedDate.month &&
+                             date.day == provider.selectedDate.day;
+
+          return GestureDetector(
+            onTap: () => provider.setSelectedDate(date),
+            child: Container(
+              width: 60,
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    DateFormat('MMM').format(date),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isSelected ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  Text(
+                    '${date.day}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(ExpenseProvider provider) {
+    final dateRangeStr = provider.currentFilter == DateRangeFilter.daily
+        ? DateFormat('MMM d, yyyy').format(provider.selectedDate)
+        : provider.currentFilter == DateRangeFilter.thisWeek
+            ? 'This Week'
+            : 'This Month';
+
     return Card(
       margin: const EdgeInsets.all(16),
       color: Theme.of(context).colorScheme.primaryContainer,
@@ -78,43 +183,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             Text(
-              'Today\'s Expenses',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
+              'Total Expenses ($dateRangeStr)',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              '\$${total.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
+              '\$${provider.total.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDateheader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Transactions',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            DateFormat('MMM d, yyyy').format(DateTime.now()),
-            style: const TextStyle(color: Colors.grey),
-          ),
-        ],
       ),
     );
   }
@@ -127,7 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Icon(Icons.receipt_long, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            'No expenses today',
+            'No expenses found',
             style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
         ],

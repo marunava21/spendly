@@ -34,6 +34,30 @@ class ExpenseRepository {
     return maps.map((m) => Expense.fromMap(m)).toList();
   }
 
+  Future<List<Expense>> getExpensesByDateRange(DateTime start, DateTime end) async {
+    final db = await _dbHelper.database;
+    final startStr = start.toIso8601String();
+    final endStr = end.toIso8601String();
+    final maps = await db.query(
+      'expense',
+      where: 'date between ? and ?',
+      whereArgs: [startStr, endStr],
+      orderBy: 'date Desc',
+    );
+    return maps.map((m) => Expense.fromMap(m)).toList();
+  }
+
+  Future<List<Expense>> searchExpenses(String query) async {
+    final db = await _dbHelper.database;
+    final maps = await db.query(
+      'expense',
+      where: 'note LIKE ? OR category LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+      orderBy: 'date Desc',
+    );
+    return maps.map((m) => Expense.fromMap(m)).toList();
+  }
+
   Future<void> insertExpense(Expense expense) async {
     final db = await _dbHelper.database;
     await db.insert(
