@@ -18,7 +18,11 @@ class ExpenseProvider extends ChangeNotifier {
   Map<String, double> _categoryTotals = {};
   Map<String, double> _dailyTotals = {};
   Map<DateTime, double> _calendarDailyTotals = {};
+  Map<DateTime, Set<String>> _calendarDailyTransactionTypes = {};
   double _calendarMonthlyTotal = 0.0;
+  double _monthlyOwe = 0.0;
+  double _monthlyOwed = 0.0;
+  double _monthlyInvestment = 0.0;
 
   List<Expense> get expenses => _expense;
   double get total => _total;
@@ -29,7 +33,11 @@ class ExpenseProvider extends ChangeNotifier {
   Map<String, double> get categoryTotals => _categoryTotals;
   Map<String, double> get dailyTotals => _dailyTotals;
   Map<DateTime, double> get calendarDailyTotals => _calendarDailyTotals;
+  Map<DateTime, Set<String>> get calendarDailyTransactionTypes => _calendarDailyTransactionTypes;
   double get calendarMonthlyTotal => _calendarMonthlyTotal;
+  double get monthlyOwe => _monthlyOwe;
+  double get monthlyOwed => _monthlyOwed;
+  double get monthlyInvestment => _monthlyInvestment;
 
   ExpenseProvider({ExpenseRepository? repository})
     : _repository = repository ?? ExpenseRepository();
@@ -56,11 +64,14 @@ class ExpenseProvider extends ChangeNotifier {
     }
 
     _expense = await _repository.getExpensesByDateRange(start, end);
-    _total = _expense.fold(0.0, (sum, e) => sum + e.amount);
+    
+    // Only normal expenses count towards standard totals
+    final normalExpenses = _expense.where((e) => e.transactionType == 'expense').toList();
+    _total = normalExpenses.fold(0.0, (sum, e) => sum + e.amount);
 
     _categoryTotals = {};
     _dailyTotals = {};
-    for (var e in _expense) {
+    for (var e in normalExpenses) {
       _categoryTotals[e.category] = (_categoryTotals[e.category] ?? 0.0) + e.amount;
       
       // We use 'yyyy-MM-dd' to easily sort them chronologically later if needed
@@ -96,11 +107,28 @@ class ExpenseProvider extends ChangeNotifier {
     final expenses = await _repository.getExpensesByDateRange(start, end);
     
     _calendarDailyTotals = {};
+    _calendarDailyTransactionTypes = {};
     _calendarMonthlyTotal = 0.0;
+    _monthlyOwe = 0.0;
+    _monthlyOwed = 0.0;
+    _monthlyInvestment = 0.0;
+    
     for (var e in expenses) {
       final dateOnly = DateTime(e.date.year, e.date.month, e.date.day);
-      _calendarDailyTotals[dateOnly] = (_calendarDailyTotals[dateOnly] ?? 0.0) + e.amount;
-      _calendarMonthlyTotal += e.amount;
+      
+      _calendarDailyTransactionTypes.putIfAbsent(dateOnly, () => {});
+      _calendarDailyTransactionTypes[dateOnly]!.add(e.transactionType);
+      
+      if (e.transactionType == 'expense') {
+        _calendarDailyTotals[dateOnly] = (_calendarDailyTotals[dateOnly] ?? 0.0) + e.amount;
+        _calendarMonthlyTotal += e.amount;
+      } else if (e.transactionType == 'owed') {
+        _monthlyOwed += e.amount;
+      } else if (e.transactionType == 'owe') {
+        _monthlyOwe += e.amount;
+      } else if (e.transactionType == 'investment') {
+        _monthlyInvestment += e.amount;
+      }
     }
     notifyListeners();
   }
@@ -114,6 +142,11 @@ class ExpenseProvider extends ChangeNotifier {
     required String category,
     DateTime? date,
     String? note,
+    String transactionType = 'expense',
+    String? personName,
+    String? personEmail,
+    String? brokerName,
+    String? companyName,
   }) async {
     final expense = Expense(
       id: __uuid.v4(),
@@ -121,6 +154,11 @@ class ExpenseProvider extends ChangeNotifier {
       category: category,
       date: date ?? DateTime.now(),
       note: note,
+      transactionType: transactionType,
+      personName: personName,
+      personEmail: personEmail,
+      brokerName: brokerName,
+      companyName: companyName,
     );
     await _repository.insertExpense(expense);
     await loadExpenses();

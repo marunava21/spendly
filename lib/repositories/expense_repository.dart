@@ -51,8 +51,8 @@ class ExpenseRepository {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'expense',
-      where: 'note LIKE ? OR category LIKE ?',
-      whereArgs: ['%$query%', '%$query%'],
+      where: 'note LIKE ? OR category LIKE ? OR personName LIKE ? OR brokerName LIKE ? OR companyName LIKE ?',
+      whereArgs: ['%$query%', '%$query%', '%$query%', '%$query%', '%$query%'],
       orderBy: 'date Desc',
     );
     return maps.map((m) => Expense.fromMap(m)).toList();

@@ -68,15 +68,22 @@ class _CalendarMainScreenState extends State<CalendarMainScreen> {
       ),
       body: Consumer<ExpenseProvider>(
         builder: (context, provider, child) {
-          return Column(
-            children: [
-              _buildCalendarHeader(provider),
-              _buildDaysOfWeek(),
-              _buildCalendarGrid(provider),
-              const Spacer(),
-              _buildMonthlyTotal(provider),
-              const Spacer(),
-            ],
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadCalendarData();
+              await provider.loadExpenses();
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                _buildCalendarHeader(provider),
+                _buildDaysOfWeek(),
+                _buildCalendarGrid(provider),
+                const SizedBox(height: 32),
+                _buildMonthlyTotal(provider),
+                const SizedBox(height: 80), // Padding to avoid FAB overlap
+              ],
+            ),
           );
         },
       ),
@@ -181,6 +188,11 @@ class _CalendarMainScreenState extends State<CalendarMainScreen> {
         final totalSpent = provider.calendarDailyTotals[cellDate] ?? 0.0;
         final isWeekend = cellDate.weekday == 6 || cellDate.weekday == 7;
 
+        final transactionTypes = provider.calendarDailyTransactionTypes[cellDate] ?? {};
+        bool hasOwe = transactionTypes.contains('owe');
+        bool hasOwed = transactionTypes.contains('owed');
+        bool hasInvestment = transactionTypes.contains('investment');
+
         return GestureDetector(
           onTap: () {
             provider.setSelectedDate(cellDate);
@@ -189,37 +201,75 @@ class _CalendarMainScreenState extends State<CalendarMainScreen> {
               MaterialPageRoute(builder: (_) => const DashboardScreen()),
             );
           },
-          child: Container(
-            margin: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).colorScheme.primary 
-                  : (totalSpent > 0 ? Colors.teal.shade50 : Colors.transparent),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$day',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected 
-                        ? Colors.white 
-                        : (isWeekend ? Colors.blue.shade800 : Colors.black87),
+          child: Stack(
+            children: [
+              Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: isSelected 
+                      ? Theme.of(context).colorScheme.primary 
+                      : (totalSpent > 0 ? Colors.teal.shade50 : Colors.transparent),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected 
+                              ? Colors.white 
+                              : (isWeekend ? Colors.blue.shade800 : Colors.black87),
+                        ),
+                      ),
+                      if (totalSpent > 0)
+                        Text(
+                          totalSpent.toInt().toString(), 
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.white70 : Colors.teal.shade700,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (totalSpent > 0)
-                  Text(
-                    totalSpent.toInt().toString(), 
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white70 : Colors.teal.shade700,
-                    ),
+              ),
+              if (hasOwe || hasOwed || hasInvestment)
+                Positioned(
+                  top: 8,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (hasOwed)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                        ),
+                      if (hasOwe)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        ),
+                      if (hasInvestment)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
+                          decoration: const BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
+                        ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         );
       },
@@ -242,6 +292,52 @@ class _CalendarMainScreenState extends State<CalendarMainScreen> {
             color: Theme.of(context).colorScheme.primary,
           ),
         ),
+        if (provider.monthlyOwe > 0 || provider.monthlyOwed > 0) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              if (provider.monthlyOwe > 0)
+                Column(
+                  children: [
+                    Text('I Owe', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${provider.monthlyOwe.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                  ],
+                ),
+              if (provider.monthlyOwed > 0)
+                Column(
+                  children: [
+                    Text('Owed to Me', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${provider.monthlyOwed.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+        if (provider.monthlyInvestment > 0) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Total Investment',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '\$${provider.monthlyInvestment.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+        ],
       ],
     );
   }

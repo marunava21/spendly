@@ -18,7 +18,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -31,7 +31,12 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         category TEXT NOT NULL,
         date TEXT NOT NULL,
-        note TEXT
+        note TEXT,
+        transactionType TEXT DEFAULT 'expense',
+        personName TEXT,
+        personEmail TEXT,
+        brokerName TEXT,
+        companyName TEXT
       )
     ''');
     
@@ -41,6 +46,15 @@ class DatabaseHelper {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createV2Tables(db);
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE expense ADD COLUMN transactionType TEXT DEFAULT "expense"');
+      await db.execute('ALTER TABLE expense ADD COLUMN personName TEXT');
+      await db.execute('ALTER TABLE expense ADD COLUMN personEmail TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE expense ADD COLUMN brokerName TEXT');
+      await db.execute('ALTER TABLE expense ADD COLUMN companyName TEXT');
     }
   }
 

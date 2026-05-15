@@ -15,10 +15,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    CalendarMainScreen(),
-    AnalyticsScreen(),
-  ];
+  final List<Widget> _screens = const [CalendarMainScreen(), AnalyticsScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -29,15 +26,13 @@ class _MainScreenState extends State<MainScreen> {
           final provider = context.read<ExpenseProvider>();
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AddExpenseScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
           );
           provider.loadExpenses();
         },
         child: const Icon(Icons.add),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -50,10 +45,10 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pie_chart),
-            label: 'Analytics',
-          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.pie_chart),
+          //   label: 'Analytics',
+          // ),
         ],
       ),
     );
