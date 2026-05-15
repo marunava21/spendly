@@ -43,3 +43,36 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Confidential and Sensitive Info
+*.env
+*.env.*
+.env
+.env.*
+
+# Local Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# API Keys and Secrets
+secrets.dart
+keys.json
+config.json
+
+# Firebase / GCP Secrets
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Keystore and signing files
+*.keystore
+*.jks
+key.properties
+
+# Android local properties (often contains paths and sometimes keys)
+local.properties
+
