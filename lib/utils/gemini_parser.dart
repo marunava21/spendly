@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:spendly/utils/statement_parser.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiParser {
-  // Using the API key provided by the user
-  static const String _apiKey = 'AIzaSyBj_UcePh9guhmuDgc-pIWYAb7XN5ZbTRU';
+  // Using the API key provided from .env
+  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
   /// Extracts debit transactions from a PDF using Gemini Generative AI
   static Future<List<ParsedTransaction>> extractDebitsFromPDF(Uint8List pdfBytes) async {

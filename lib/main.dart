@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:spendly/providers/expense_provider.dart';
 import 'package:spendly/providers/category_provider.dart';
 import 'package:spendly/providers/budget_provider.dart';
 import 'package:spendly/screens/main_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   runApp(const SpendlyApp());
 }
 
