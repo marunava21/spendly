@@ -45,10 +45,10 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.pie_chart),
-          //   label: 'Analytics',
-          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.pie_chart),
+            label: 'Analytics',
+          ),
         ],
       ),
     );

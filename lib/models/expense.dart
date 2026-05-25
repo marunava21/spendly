@@ -9,6 +9,10 @@ class Expense {
   final String? personEmail;
   final String? brokerName;
   final String? companyName;
+  final String currency;
+  final double conversionRate;
+  final double? originalAmount;
+  final String? invoicePath;
 
   Expense({
     required this.id,
@@ -21,6 +25,10 @@ class Expense {
     this.personEmail,
     this.brokerName,
     this.companyName,
+    this.currency = 'SGD',
+    this.conversionRate = 1.0,
+    this.originalAmount,
+    this.invoicePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -35,6 +43,10 @@ class Expense {
       'personEmail': personEmail,
       'brokerName': brokerName,
       'companyName': companyName,
+      'currency': currency,
+      'conversionRate': conversionRate,
+      'originalAmount': originalAmount,
+      'invoicePath': invoicePath,
     };
   }
 
@@ -50,6 +62,10 @@ class Expense {
       personEmail: map['personEmail'],
       brokerName: map['brokerName'],
       companyName: map['companyName'],
+      currency: map['currency'] ?? 'SGD',
+      conversionRate: map['conversionRate'] ?? 1.0,
+      originalAmount: map['originalAmount'],
+      invoicePath: map['invoicePath'],
     );
   }
 
@@ -64,6 +80,10 @@ class Expense {
     String? personEmail,
     String? brokerName,
     String? companyName,
+    String? currency,
+    double? conversionRate,
+    double? originalAmount,
+    String? invoicePath,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -76,6 +96,10 @@ class Expense {
       personEmail: personEmail ?? this.personEmail,
       brokerName: brokerName ?? this.brokerName,
       companyName: companyName ?? this.companyName,
+      currency: currency ?? this.currency,
+      conversionRate: conversionRate ?? this.conversionRate,
+      originalAmount: originalAmount ?? this.originalAmount,
+      invoicePath: invoicePath ?? this.invoicePath,
     );
   }
 }

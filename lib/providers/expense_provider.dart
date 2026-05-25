@@ -147,6 +147,10 @@ class ExpenseProvider extends ChangeNotifier {
     String? personEmail,
     String? brokerName,
     String? companyName,
+    String currency = 'SGD',
+    double conversionRate = 1.0,
+    double? originalAmount,
+    String? invoicePath,
   }) async {
     final expense = Expense(
       id: __uuid.v4(),
@@ -159,9 +163,24 @@ class ExpenseProvider extends ChangeNotifier {
       personEmail: personEmail,
       brokerName: brokerName,
       companyName: companyName,
+      currency: currency,
+      conversionRate: conversionRate,
+      originalAmount: originalAmount,
+      invoicePath: invoicePath,
     );
     await _repository.insertExpense(expense);
     await loadExpenses();
+  }
+
+  Future<void> updateExpense(Expense expense) async {
+    await _repository.insertExpense(expense);
+    await loadExpenses();
+  }
+
+  Future<void> addExpenses(List<Expense> expenses) async {
+    await _repository.insertExpenses(expenses);
+    await loadExpenses();
+    await loadCalendarData();
   }
 
   Future<void> deleteExpense(String id) async {

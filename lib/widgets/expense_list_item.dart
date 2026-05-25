@@ -5,11 +5,13 @@ import 'package:spendly/models/expense.dart';
 class ExpenseListItem extends StatelessWidget {
   final Expense expense;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const ExpenseListItem({
     super.key,
     required this.expense,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -37,6 +39,7 @@ class ExpenseListItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: isExpense 
               ? Theme.of(context).colorScheme.primaryContainer

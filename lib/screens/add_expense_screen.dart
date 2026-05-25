@@ -1,11 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:intl/intl.dart';
+import 'package:currency_picker/currency_picker.dart';
+import 'package:spendly/models/expense.dart';
 import 'package:spendly/providers/expense_provider.dart';
 import 'package:spendly/providers/category_provider.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final Expense? expense;
+  const AddExpenseScreen({super.key, this.expense});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -18,15 +25,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _personNameController = TextEditingController();
   final _brokerNameController = TextEditingController();
   final _companyNameController = TextEditingController();
+  final _conversionRateController = TextEditingController(text: '1.0');
 
   String _transactionType = 'expense'; // 'expense', 'owe', 'owed', 'investment'
   String? _selectedCategory;
   late DateTime _selectedDate;
+  String _selectedCurrencyCode = 'SGD';
+  String _selectedCurrencySymbol = '\$';
+  String? _invoicePath;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = context.read<ExpenseProvider>().selectedDate;
+    if (widget.expense != null) {
+      final e = widget.expense!;
+      _transactionType = e.transactionType;
+      _selectedCategory = (e.category == 'IOU' || e.category == 'Investment') ? null : e.category;
+      _selectedDate = e.date;
+      _selectedCurrencyCode = e.currency;
+      _conversionRateController.text = e.conversionRate.toString();
+      _amountController.text = (e.originalAmount ?? e.amount).toString();
+      _noteController.text = e.note ?? '';
+      _personNameController.text = e.personName ?? '';
+      _brokerNameController.text = e.brokerName ?? '';
+      _companyNameController.text = e.companyName ?? '';
+      _invoicePath = e.invoicePath;
+    } else {
+      _selectedDate = context.read<ExpenseProvider>().selectedDate;
+    }
   }
 
   @override
@@ -36,7 +63,58 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     _personNameController.dispose();
     _brokerNameController.dispose();
     _companyNameController.dispose();
+    _conversionRateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickInvoicePhoto() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _getImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _getImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _getImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image != null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${p.basename(image.path)}';
+        final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
+        setState(() {
+          _invoicePath = savedImage.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: \$e')),
+        );
+      }
+    }
   }
 
   void _saveExpense() {
@@ -48,7 +126,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         return;
       }
 
-      final amount = double.parse(_amountController.text);
+      final originalAmount = double.parse(_amountController.text);
+      double conversionRate = 1.0;
+      if (_selectedCurrencyCode != 'SGD') {
+        conversionRate = double.tryParse(_conversionRateController.text) ?? 1.0;
+      }
+      final amount = originalAmount / conversionRate;
+
       final note = _noteController.text.trim();
       final personName = _personNameController.text.trim();
       final brokerName = _brokerNameController.text.trim();
@@ -61,19 +145,44 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         savedCategory = 'Investment';
       }
 
-      context.read<ExpenseProvider>().addExpense(
-            amount: amount,
-            category: savedCategory,
-            date: _selectedDate,
-            note: note.isEmpty ? null : note,
-            transactionType: _transactionType,
-            personName: (_transactionType == 'owe' || _transactionType == 'owed') 
-                ? (personName.isEmpty ? null : personName) : null,
-            brokerName: _transactionType == 'investment' 
-                ? (brokerName.isEmpty ? null : brokerName) : null,
-            companyName: _transactionType == 'investment' 
-                ? (companyName.isEmpty ? null : companyName) : null,
-          );
+      if (widget.expense != null) {
+        final updatedExpense = widget.expense!.copyWith(
+          amount: amount,
+          category: savedCategory,
+          date: _selectedDate,
+          note: note.isEmpty ? null : note,
+          transactionType: _transactionType,
+          personName: (_transactionType == 'owe' || _transactionType == 'owed') 
+              ? (personName.isEmpty ? null : personName) : null,
+          brokerName: _transactionType == 'investment' 
+              ? (brokerName.isEmpty ? null : brokerName) : null,
+          companyName: _transactionType == 'investment' 
+              ? (companyName.isEmpty ? null : companyName) : null,
+          currency: _selectedCurrencyCode,
+          conversionRate: conversionRate,
+          originalAmount: originalAmount,
+          invoicePath: _invoicePath,
+        );
+        context.read<ExpenseProvider>().updateExpense(updatedExpense);
+      } else {
+        context.read<ExpenseProvider>().addExpense(
+              amount: amount,
+              category: savedCategory,
+              date: _selectedDate,
+              note: note.isEmpty ? null : note,
+              transactionType: _transactionType,
+              personName: (_transactionType == 'owe' || _transactionType == 'owed') 
+                  ? (personName.isEmpty ? null : personName) : null,
+              brokerName: _transactionType == 'investment' 
+                  ? (brokerName.isEmpty ? null : brokerName) : null,
+              companyName: _transactionType == 'investment' 
+                  ? (companyName.isEmpty ? null : companyName) : null,
+              currency: _selectedCurrencyCode,
+              conversionRate: conversionRate,
+              originalAmount: originalAmount,
+              invoicePath: _invoicePath,
+            );
+      }
 
       Navigator.pop(context);
     }
@@ -81,9 +190,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String title = 'Add Expense';
-    if (_transactionType == 'owe' || _transactionType == 'owed') title = 'Add IOU';
-    if (_transactionType == 'investment') title = 'Add Investment';
+    String title = widget.expense != null ? 'Edit ' : 'Add ';
+    if (_transactionType == 'owe' || _transactionType == 'owed') {
+      title += 'IOU';
+    } else if (_transactionType == 'investment') {
+      title += 'Investment';
+    } else {
+      title += 'Expense';
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -116,27 +230,89 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                TextFormField(
-                  controller: _amountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    prefixText: '\$ ',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an amount';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Please enter a valid number';
-                    }
-                    if (double.parse(value) <= 0) {
-                      return 'Amount must be greater than zero';
-                    }
-                    return null;
-                  },
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: InkWell(
+                        onTap: () {
+                          showCurrencyPicker(
+                            context: context,
+                            showFlag: true,
+                            showCurrencyName: true,
+                            showCurrencyCode: true,
+                            onSelect: (Currency currency) {
+                              setState(() {
+                                _selectedCurrencyCode = currency.code;
+                                _selectedCurrencySymbol = currency.symbol;
+                              });
+                            },
+                          );
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Currency',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(_selectedCurrencyCode),
+                              const Icon(Icons.arrow_drop_down),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        controller: _amountController,
+                        decoration: InputDecoration(
+                          labelText: 'Amount',
+                          prefixText: '$_selectedCurrencySymbol ',
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an amount';
+                          }
+                          if (double.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                          if (double.parse(value) <= 0) {
+                            return 'Amount must be greater than zero';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
+                if (_selectedCurrencyCode != 'SGD') ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _conversionRateController,
+                    decoration: InputDecoration(
+                      labelText: 'Conversion Rate (1 SGD = ? $_selectedCurrencyCode)',
+                      border: const OutlineInputBorder(),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a rate';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                        return 'Please enter a valid rate';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 
                 if (_transactionType == 'expense')
@@ -267,15 +443,62 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   maxLines: 3,
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickInvoicePhoto,
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Add Invoice Photo'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_invoicePath != null) ...[
+                  const SizedBox(height: 16),
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(_invoicePath!),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () {
+                              setState(() {
+                                _invoicePath = null;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _saveExpense,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text(
-                    'Save Transaction',
-                    style: TextStyle(fontSize: 18),
+                  child: Text(
+                    widget.expense != null ? 'Update Transaction' : 'Save Transaction',
+                    style: const TextStyle(fontSize: 18),
                   ),
                 ),
               ],

@@ -52,7 +52,7 @@ void main() {
 
     test('getAllExpense returns list of expenses', () async {
       when(
-        mockDatabase.query('expenses', orderBy: anyNamed('orderBy')),
+        mockDatabase.query('expense', orderBy: anyNamed('orderBy')),
       ).thenAnswer((_) async => [testExpense.toMap()]);
 
       final result = await repository.getAllExpense();
@@ -72,7 +72,7 @@ void main() {
       ).thenAnswer((_) async => 1);
       await repository.deleteExpense('1');
       verify(
-        mockDatabase.delete('expense', where: 'id=?', whereArgs: ['1']),
+        mockDatabase.delete('expense', where: 'id = ?', whereArgs: ['1']),
       ).called(1);
     });
 

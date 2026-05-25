@@ -41,12 +41,19 @@ dependencies:
   provider: ^6.1.2
   fl_chart: ^1.2.0
   google_fonts: ^8.1.0
+  currency_picker: ^2.0.21
+  file_picker: ^8.1.2
+  google_generative_ai: ^0.4.7
+  csv: ^6.0.0
+  image_picker: ^1.2.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   mockito: ^5.4.4
   build_runner: ^2.4.8
+  sqflite_common: ^2.5.4
 
 
   # The "flutter_lints" package below contains a set of recommended lints to

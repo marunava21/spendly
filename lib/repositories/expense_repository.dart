@@ -67,6 +67,19 @@ class ExpenseRepository {
     );
   }
 
+  Future<void> insertExpenses(List<Expense> expenses) async {
+    final db = await _dbHelper.database;
+    final batch = db.batch();
+    for (var expense in expenses) {
+      batch.insert(
+        'expense',
+        expense.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<void> deleteExpense(String id) async {
     final db = await _dbHelper.database;
     await db.delete('expense', where: 'id = ?', whereArgs: [id]);

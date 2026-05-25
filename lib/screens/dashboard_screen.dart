@@ -224,6 +224,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return ExpenseListItem(
           expense: expense,
           onDelete: () => provider.deleteExpense(expense.id),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddExpenseScreen(expense: expense),
+              ),
+            );
+            provider.loadExpenses();
+            provider.loadCalendarData();
+          },
         );
       },
     );

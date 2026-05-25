@@ -18,7 +18,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -36,7 +36,11 @@ class DatabaseHelper {
         personName TEXT,
         personEmail TEXT,
         brokerName TEXT,
-        companyName TEXT
+        companyName TEXT,
+        currency TEXT DEFAULT 'SGD',
+        conversionRate REAL DEFAULT 1.0,
+        originalAmount REAL,
+        invoicePath TEXT
       )
     ''');
     
@@ -55,6 +59,14 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await db.execute('ALTER TABLE expense ADD COLUMN brokerName TEXT');
       await db.execute('ALTER TABLE expense ADD COLUMN companyName TEXT');
+    }
+    if (oldVersion < 5) {
+      await db.execute('ALTER TABLE expense ADD COLUMN currency TEXT DEFAULT "SGD"');
+      await db.execute('ALTER TABLE expense ADD COLUMN conversionRate REAL DEFAULT 1.0');
+      await db.execute('ALTER TABLE expense ADD COLUMN originalAmount REAL');
+    }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE expense ADD COLUMN invoicePath TEXT');
     }
   }
 

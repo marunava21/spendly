@@ -5,6 +5,7 @@ import 'package:spendly/providers/expense_provider.dart';
 import 'package:spendly/screens/dashboard_screen.dart';
 import 'package:spendly/screens/category_list_screen.dart';
 import 'package:spendly/screens/budget_screen.dart';
+import 'package:spendly/screens/statement_import_screen.dart';
 
 class CalendarMainScreen extends StatefulWidget {
   const CalendarMainScreen({super.key});
@@ -56,6 +57,17 @@ class _CalendarMainScreenState extends State<CalendarMainScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_upload),
+              title: const Text('Import Statement'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StatementImportScreen()),
+                );
               },
             ),
           ],

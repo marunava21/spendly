@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:spendly/models/expense.dart';
 import 'package:spendly/providers/expense_provider.dart';
 import 'package:spendly/widgets/expense_list_item.dart';
+import 'package:spendly/screens/add_expense_screen.dart';
 
 class ExpenseSearchDelegate extends SearchDelegate {
   final ExpenseProvider provider;
@@ -76,6 +77,16 @@ class ExpenseSearchDelegate extends SearchDelegate {
               onDelete: () {
                 provider.deleteExpense(expense.id);
                 // Simple hack to trigger rebuild
+                query = query;
+              },
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddExpenseScreen(expense: expense),
+                  ),
+                );
+                // Trigger refresh by updating query hack
                 query = query;
               },
             );
