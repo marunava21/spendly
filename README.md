@@ -1,72 +1,49 @@
-# Spendly 💸
+# Spendly
 
-Spendly is a modern, intelligent, and feature-rich personal finance tracker built with Flutter. It helps you manage your expenses, track IOUs, monitor investments, and effortlessly import bank statements using AI.
+I built Spendly because I wanted a simpler, smarter way to track my finances without spending hours entering data manually. It's a personal finance tracker built with Flutter that lets you manage your daily expenses, keep track of who owes you money (and who you owe), and monitor your investments all in one place. 
 
-## 🚀 Key Features
+The coolest part is that you can just toss it a PDF of your bank statement, and it uses Gemini to parse out all your debits and turn them into structured records. No more typing out long receipts.
 
-### 1. Smart Transaction Management
-- **Multi-Type Transactions**: Support for standard `expenses`, `investments`, money you `owe`, and money you are `owed`.
-- **Categorization**: Auto-guess categories for imports and manual categorized entries (Food, Transport, Bills, Shopping, etc.).
-- **Multi-Currency Support**: Record transactions with different currencies and conversion rates.
-- **Invoice Attachments**: Attach invoice or receipt paths to your expense records.
+## Features
 
-### 2. AI-Powered Statement Parsing
-- **PDF Bank Statements**: Upload your bank statements in PDF format and let the **Gemini 1.5 Pro** Generative AI model automatically extract your debit transactions.
-- **CSV & Raw Text Parsing**: Paste raw statement text or import CSVs, and let the robust built-in `StatementParser` extract dates, amounts, categories, and descriptions.
-- **Bulk Import Review**: A comprehensive review screen allows you to select, edit, and bulk-import AI-parsed transactions into your database. 
+- **Multi-type tracking**: Keep tabs on standard expenses, investments, and IOUs.
+- **AI statement parsing**: Upload a PDF bank statement, and the app uses Gemini 1.5 Pro to extract the transactions automatically.
+- **CSV & text parsing**: You can also paste raw text or import a CSV. The built-in parser guesses the categories and dates.
+- **Bulk import review**: Before anything gets saved to your database, you get a staging screen to review, edit, and categorize everything.
+- **Calendar & analytics**: Check your spending daily, weekly, or monthly, and see it laid out on a calendar.
 
-### 3. Comprehensive Analytics & Views
-- **Date Filters**: View your expenses on a Daily, Weekly, or Monthly basis.
-- **Calendar Integration**: A beautiful calendar view highlighting daily spendings, IOUs, and investments.
-- **Search Capabilities**: Instantly find past transactions by searching descriptions/payees.
+## Why I built this
 
-## 🏗 Workflow & Architecture
+I was tired of juggling multiple apps for budgeting, splitting bills with friends, and watching my investments. Most trackers either had way too many features I didn't need or completely lacked the ability to parse my local bank statements accurately. I wanted something clean that just worked, especially when it came to importing data. Wiring up Gemini to handle the PDF parsing was a fun experiment that turned out to be incredibly practical for cutting down manual data entry.
 
-Spendly relies on a clean, scalable architecture using the `provider` package for state management. 
+## Installation
 
-### Core Workflow
-1. **Adding Transactions**:
-   - **Manual Entry**: Users can add transactions manually, selecting type (Expense, Invest, I Owe, Owed), date, category, and amount.
-   - **AI Import**: Users upload a PDF. `GeminiParser` sends it to the Gemini API, returning a JSON array of parsed debit transactions.
-   - **Text/CSV Import**: Users input raw text/CSV. `StatementParser` reads line-by-line, predicting categories and dates.
-2. **Reviewing Imports**:
-   - The `ImportReviewScreen` displays all parsed transactions. Users can tweak amounts, dates, types, and categories, or deselect incorrect entries. 
-   - Upon confirmation, bulk entries are mapped to `Expense` models and saved to the local database via `ExpenseRepository`.
-3. **State Management**:
-   - `ExpenseProvider` acts as the source of truth, loading data, caching daily/monthly totals, and exposing them to the UI.
-   - `CategoryProvider` supplies the list of available categories (with colors and icons).
+You'll need Flutter installed on your machine.
 
-### Key Components
-
-- **`Expense` (Model)**: The central data model holding all transaction metadata (amount, currency, type, participants, date, etc.).
-- **`ExpenseProvider` (State)**: Manages UI state, filtering logic, calendar data, and communicates with the repository.
-- **`GeminiParser` (Utility)**: Interfaces with `google_generative_ai` for AI-based PDF parsing.
-- **`StatementParser` (Utility)**: A robust string and regex-based parser for dates, amounts, and automatic categorization.
-- **`ImportReviewScreen` (UI)**: The staging ground for finalizing AI/CSV extracted transactions.
-
-## 🛠 Getting Started
-
-1. **Clone the repository**:
+1. Clone the repository:
    ```bash
    git clone https://github.com/marunava21/spendly.git
    ```
-2. **Install dependencies**:
+2. Navigate into the directory and grab the dependencies:
    ```bash
+   cd spendly
    flutter pub get
    ```
-3. **Environment Setup**:
-   - Create a `.env` file in the root directory.
-   - Add your Gemini API Key: `GEMINI_API_KEY=your_api_key_here`.
-4. **Run the App**:
-   ```bash
-   flutter run
+3. Set up your environment variables. Create a `.env` file in the root directory and add your Gemini API key:
+   ```env
+   GEMINI_API_KEY=your_api_key_here
    ```
 
-## 🧪 Testing
-Run the unit tests to verify parsing logic and other utilities:
+## Usage
+
+To run the app locally on your emulator or device:
+
+```bash
+flutter run
+```
+
+If you want to run the unit tests (which cover the custom statement parsing and categorization logic):
+
 ```bash
 flutter test
 ```
-
----
-*Built with ❤️ using Flutter.*
