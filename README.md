@@ -1,4 +1,4 @@
-![alt text](<Spendly Final.gif>)
+![alt text](<spendly final 2.gif>)
 # Spendly
 
 I built Spendly because I wanted a simpler, smarter way to track my finances without spending hours entering data manually. It's a personal finance tracker built with Flutter that lets you manage your daily expenses, keep track of who owes you money (and who you owe), and monitor your investments all in one place. 
