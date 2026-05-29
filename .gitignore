@@ -76,3 +76,5 @@ key.properties
 # Android local properties (often contains paths and sometimes keys)
 local.properties
 
+# Showcase related
+/showcase
