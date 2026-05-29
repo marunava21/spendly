@@ -6,6 +6,8 @@ The coolest part is that you can just toss it a PDF of your bank statement, and 
 
 ## Features
 
+![Spendly Showcase](showcase/showcase.gif)
+
 - **Multi-type tracking**: Keep tabs on standard expenses, investments, and IOUs.
 - **AI statement parsing**: Upload a PDF bank statement, and the app uses Gemini 1.5 Pro to extract the transactions automatically.
 - **CSV & text parsing**: You can also paste raw text or import a CSV. The built-in parser guesses the categories and dates.
