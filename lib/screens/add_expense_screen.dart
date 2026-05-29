@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:intl/intl.dart';
@@ -90,6 +92,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   _getImage(ImageSource.camera);
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf),
+                title: const Text('Choose Document (PDF)'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _getPdf();
+                },
+              ),
             ],
           ),
         );
@@ -111,7 +121,32 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: \$e')),
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _getPdf() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final File file = File(result.files.single.path!);
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_${p.basename(file.path)}';
+        final savedFile = await file.copy('${appDir.path}/$fileName');
+        setState(() {
+          _invoicePath = savedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking PDF: $e')),
         );
       }
     }
@@ -450,8 +485,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _pickInvoicePhoto,
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text('Add Invoice Photo'),
+                        icon: const Icon(Icons.attach_file),
+                        label: const Text('Add Attachment'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -465,12 +500,51 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(_invoicePath!),
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                        child: _invoicePath!.toLowerCase().endsWith('.pdf')
+                            ? SizedBox(
+                                height: 300,
+                                width: double.infinity,
+                                child: SfPdfViewer.file(
+                                  File(_invoicePath!),
+                                  canShowScrollHead: false,
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => Dialog(
+                                      backgroundColor: Colors.black87,
+                                      insetPadding: EdgeInsets.zero,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          InteractiveViewer(
+                                            panEnabled: true,
+                                            minScale: 0.5,
+                                            maxScale: 4,
+                                            child: Image.file(File(_invoicePath!)),
+                                          ),
+                                          Positioned(
+                                            top: 40,
+                                            right: 20,
+                                            child: IconButton(
+                                              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                              onPressed: () => Navigator.of(context).pop(),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Image.file(
+                                  File(_invoicePath!),
+                                  height: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                       ),
                       Positioned(
                         top: 8,
